@@ -36,8 +36,12 @@
  		init();
  		loadNotes();
  	});
+ 	$(document).on('pagebeforeshow','#newnote',function(e){
+ 		$("#note_title").val("");
+ 		$("#note_ta").val("");
+ 	});
  	$(document).on('click','#addNewNote',  function(e){
- 		console.log("adding new note");
+ 		//console.log("adding new note");
  		$("#popupmenu").popup("close");   
  		var title = $("#note_title").val();
  		var content = $("#note_ta").val();
@@ -48,7 +52,7 @@
  		}
 	});
 	$(document).on('click','#saveEditNote',  function(e){
- 		console.log("saving old note");
+ 		//console.log("saving old note");
  		$("#popupmenu2").popup("close");
  		var id = $("#note_id").val();
  		var oNote = JSON.parse(Notes[id]);
@@ -62,7 +66,7 @@
 	});
 
 	$(document).on('click','#moveToTrash',  function(e){
- 		console.log("deleting note");
+ 		//console.log("deleting note");
  		$("#popupmenu2").popup("close");
  		var id = $("#note_id").val();
  		delete(Notes[id]);
@@ -71,7 +75,7 @@
 	});
 
 	$(document).on('click', '#l_notes li',function(e){
-		console.log("foooooooo");
+		//console.log("foooooooo");
 		editPageId = e.target.id;
 		if(editPageId.startsWith("ag")){
 			editPageId = editPageId.substring(2);
