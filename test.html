@@ -3,28 +3,186 @@
 <head>
   <!-- Include meta tag to ensure proper rendering and touch zooming -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <link rel="stylesheet" href="css/app.css" type="text/css">
   <!-- Include jQuery Mobile stylesheets -->
   <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
   <!-- Include the jQuery library -->
   <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
   <!-- Include the jQuery Mobile library -->
   <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+<!--  <script>
+  	$(.title).bind()
+  </script> -->
+  <script>
+  	localStorage.removeItem("notes");
+  	var Note = function(title, content){
+  		this.id = "",
+  		this.title = title,
+  		this.content = content
+  	}
+  	var Notes = {};
+  	var editPageId = "";
+ 	$(function(){
+ 		init();
+	    loadNotes();
+ 	});
+ 	$(document).on('load','#homepage',function(e){
+ 		init();
+ 		loadNotes();
+ 	});
+ 	$(document).on('click','#addNewNote',  function(e){
+ 		console.log("adding new note");
+ 		$("#popupmenu").popup("close");   
+ 		var title = $("#note_title").val();
+ 		var content = $("#note_ta").val();
+ 		addNewNote(title,content);
+ 		persistNotes();
+ 		loadNotes();
+	});
+	$(document).on('click','#saveEditNote',  function(e){
+ 		console.log("saving old note");
+ 		$("#popupmenu2").popup("close");
+ 		var id = $("#note_id").val();
+ 		var oNote = JSON.parse(Notes[id]);
+ 		oNote.title = $("#note_title2").val();
+ 		oNote.content = $("#note_ta2").val();
+ 		Notes[oNote.id]=JSON.stringify(oNote);
+ 		persistNotes();
+		loadNotes();
+	});
+
+	$(document).on('click','#moveToTrash',  function(e){
+ 		console.log("deleting note");
+ 		$("#popupmenu2").popup("close");
+ 		var id = $("#note_id").val();
+ 		delete(Notes[id]);
+ 		persistNotes();
+		loadNotes();
+	});
+
+	$(document).on('click', '#l_notes li',function(e){
+		console.log("foooooooo");
+		editPageId = e.target.id;
+		if(editPageId.startsWith("ag")){
+			editPageId = editPageId.substring(2);
+		}
+		var oNote = JSON.parse(Notes[editPageId]);
+		$("#note_id").val(oNote.id);
+		$("#note_title2").val(oNote.title);
+		$("#note_ta2").val(oNote.content);
+	});
+
+	$( window ).unload(function() {
+		persistNotes();
+	});
+	function init(){
+		if (!localStorage.notes) {
+	 		console.log("fooo");
+	        localStorage.notes = "[]";
+	    }
+	    Notes = JSON.parse(localStorage.getItem("notes"));
+	}
+	function addNewNote(title, content){
+		var oNote = new Note(title, content);
+		oNote.id = $.now();
+		Notes[oNote.id]=JSON.stringify(oNote);
+	}
+	function loadNotes(){
+		var output="";
+		console.log("dic length" +Object.keys(Notes).length );
+	    if(Object.keys(Notes).length > 0){
+	    	console.log("1231");
+	    	for (var key in Notes) {
+    			var value = JSON.parse(Notes[key]);
+		    	output += "<li data-icon='false'><a href=#editnote  id=ag"+value.id +">"+value.title+"</a></li>"
+			}
+		}else{
+			output = "<li data-icon='false'><a href=#>No notes data</a></li>"
+		}
+		console.log(output);
+	    $("#l_notes").html(output).listview("refresh");
+	}
+	function persistNotes(){
+		localStorage.notes = JSON.stringify(Notes);
+	}
+  </script>
 </head>
 <body>
 
-<div data-role="page" id="pageone">
-  <div data-role="header">
-  <h1>Welcome To My Homepage</h1>
-  </div>
+<div data-role="page" id="homepage">
+	<div data-role="header" data-theme="b" data-position="fixed">
+		<h1>Notes</h1>
+  	</div>
 
-  <div data-role="main" class="ui-content">
-  <p>Welcome!</p>
-  </div>
+  	<div data-role="main" class="ui-content" id="dNotes">
+  		<ul data-role="listview" id="l_notes">
+  			<!-- add notes -->
+  		</ul>	
+  	</div>
+  	
+  	<div class="addbtn" id="btn">
+  		<a href="#newnote" class="ui-btn ui-shadow ui-corner-all ui-icon-edit ui-btn-icon-notext ui-btn-inline ui-btn-b">Add Notes</a>
+  	</div>
+<!--   	<div class="addbtn" id="btn">
+  		<a href="#popupmenu" data-rel="popup" class="ui-btn ui-shadow ui-corner-all ui-icon-edit ui-btn-icon-notext ui-btn-inline ui-btn-b">Add Notes</a>
+  	</div>
 
-  <div data-role="footer">
-  <h1>Footer Text</h1>
-  </div>
-</div> 
+  	<div data-role="popup" id="popupmenu" style:"position:relative; bottom:100px;">
+  		<ul data-role="listview" data-inset="true">
+	  		<li data-icon><a href="#" class="ui-btn ui-shadow ui-icon-bars ui-btn-icon-notext">Note</a></li>
+	  		<li><a href="#" class="ui-btn ui-shadow ui-icon-bullets ui-btn-icon-notext">To-Do</a></li>
+  		</ul>
+  	</div> -->
 
+</div>
+
+<div data-role ="page" id="newnote">
+	<div data-role="header" data-theme="b" data-position="fixed">
+		<div data-role="navbar">
+			<ul>
+				<li style="text-align:center;"><a href="#homepage" class="ui-btn ui-btn-left ui-corner-all ui-shadow ui-icon-arrow-l ui-btn-icon-notext ui-btn-inline" style="margin-top:15px">Back</a></li>
+				<li style="text-align:center;"><h2>Note<h2></li>
+				<li style="text-align:center;"><a href="#popupmenu" data-rel="popup" class="ui-btn ui-btn-right ui-corner-all ui-shadow ui-icon-carat-d ui-btn-icon-notext ui-btn-inline" style="margin-top:15px; margin-right:10px"></a></li>
+			</ul>
+	 	</div>
+	 	<div data-role="popup" id="popupmenu">
+  			<ul data-role="listview" data-inset="true">
+	  			<li data-icon="false"><a id="addNewNote" href="#">Save</a></li>
+	  			<!-- <li data-icon="false"><a href="#">Move to trash</a></li> -->
+  			</ul>
+  		</div>
+	</div>
+  	<div data-role="main" class="ui-content" style="position:relative">
+    	<form method="post" action="">
+      		<input type="text" name="title" id="note_title" value="Title...">
+      		<textarea name="notecontent" id="note_ta"></textarea>
+    	</form>
+  	</div>
+</div>
+
+<div data-role ="page" id="editnote">
+	<div data-role="header" data-theme="b" data-position="fixed">
+		<div data-role="navbar">
+			<ul>
+				<li style="text-align:center;"><a id="backBtn" href="#homepage" class="ui-btn ui-btn-left ui-corner-all ui-shadow ui-icon-arrow-l ui-btn-icon-notext ui-btn-inline" style="margin-top:15px">Back</a></li>
+				<li style="text-align:center;"><h2>Note<h2></li>
+				<li style="text-align:center;"><a href="#popupmenu2" data-rel="popup" class="ui-btn ui-btn-right ui-corner-all ui-shadow ui-icon-carat-d ui-btn-icon-notext ui-btn-inline" style="margin-top:15px; margin-right:10px"></a></li>
+			</ul>
+	 	</div>
+	 	<div data-role="popup" id="popupmenu2">
+  			<ul data-role="listview" data-inset="true">
+	  			<li data-icon="false"><a id="saveEditNote" href="#">Save</a></li>
+	  			<li data-icon="false"><a id="moveToTrash" href="#">Move to trash</a></li>
+  			</ul>
+  		</div>
+	</div>
+  	<div data-role="main" class="ui-content" id="editPage" style="position:relative">
+    	<form method="post" action="">
+    		<input type="hidden" id="note_id" value="">
+      		<input type="text" name="title" id="note_title2" value="">
+      		<textarea name="notecontent" id="note_ta2"></textarea>
+    	</form>
+  	</div>
+</div>
 </body>
 </html>
