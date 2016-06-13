@@ -10,22 +10,12 @@
   <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
   <!-- Include the jQuery Mobile library -->
   <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
-<!--  <script>
-  	$(.title).bind()
-  </script> -->
+  <script src="index.js"></script>
   <script>
   	//localStorage.removeItem("notes");
-  	var Note = function(title, content){
-  		this.id = "",
-  		this.title = title,
-  		this.content = content
-  	}
-  	var Notes = {};
-  	var editPageId;
-  	var newPageId=null;
  	$(function(){
  		init();
-	    loadNotes();
+	    loadNotesInListview();
 	    $("#notefooter").hide(0);
 	    $("#notefooter2").hide(0);
  	});
@@ -35,24 +25,31 @@
 	function inputBlur(i){
     	if(i.value==""){ i.value=i.defaultValue; i.style.color="#888"; }
 	}
- 	$(document).on('load','#homepage',function(e){
- 		init();
- 		loadNotes();
+	function loadNotesInListview(){
+		var notes = loadNotes();
+ 		$("#l_notes").html(notes).listview("refresh");
+	}
+
+ 	$(document).on('pagehide','#newnote',function(e){
+ 		loadNotesInListview();
  	});
+
+ 	$(document).on('pagehide','#editnote',function(e){
+ 		loadNotesInListview();
+ 	});
+
  	$(document).on('pagebeforeshow','#newnote',function(e){
  		$("#note_title").val("Title...");
  		$("#note_title").css("color", "#888")
  		$("#note_ta").val("");
- 		newPageId = null;
+ 		resetNoteId();
  	});
- 	$(document).on('click','#addNewNote',  function(e){
+ 	$(document).on('click','#saveNewNote',  function(e){
  		$("#popupmenu").popup("close");   
  		var title = $("#note_title").val();
- 		var content = $("#note_ta").val();
- 		if(isValidNote(title,content)){
- 			addNewNote(title,content);
- 			saveNotesToStorage();
- 			loadNotes();
+ 		if(!isTitleEmpty(title)){
+ 			var content = $("#note_ta").val();
+ 			saveNote(title,content);
  			$("#notefooter").show(0).delay(2000).hide(0);
  		}else{
 			$("#popupmenu").bind({popupafterclose: function(event, ui) { 
@@ -67,14 +64,11 @@
 	});
 	$(document).on('click','#saveEditNote',  function(e){
  		$("#popupmenu2").popup("close");
- 		var id = $("#note_id").val();
- 		var oNote = JSON.parse(Notes[id]);
- 		oNote.title = $("#note_title2").val();
- 		oNote.content = $("#note_ta2").val();
- 		if(isValidNote(oNote.title,oNote.content)){
- 			Notes[oNote.id]=JSON.stringify(oNote);
- 			saveNotesToStorage();
-			loadNotes();
+ 		var title = $("#note_title2").val();
+ 		if(!isTitleEmpty(title)){
+ 			var id = $("#note_id").val();
+ 			var content = $("#note_ta2").val();
+ 			saveNote(title,content,id);
 			$("#notefooter2").show(0).delay(2000).hide(0);
 		}else{
 			$("#popupmenu2").bind({popupafterclose: function(event, ui) { 
@@ -90,21 +84,21 @@
 
 	$(document).on('click','#moveToTrash',  function(e){
  		var id = $("#note_id").val();
- 		delete(Notes[id]);
- 		saveNotesToStorage();
-		loadNotes();
+ 		deleteNote(id);
+		loadNotesInListview();
 	});
 
 	$(document).on('click', '#l_notes li',function(e){
-		editPageId = e.target.id;
-		if(editPageId.startsWith("ag")){
-			editPageId = editPageId.substring(2);
+		var id = e.target.id;
+		if(id.startsWith("ag")){
+			id = id.substring(2);
+			var oNote = getNoteById(id);
+			$("#note_id").val(oNote.id);
+			$("#note_title2").val(oNote.title);
+			$("#note_ta2").val(oNote.content);
 		}
-		var oNote = JSON.parse(Notes[editPageId]);
-		$("#note_id").val(oNote.id);
-		$("#note_title2").val(oNote.title);
-		$("#note_ta2").val(oNote.content);
 	});
+
 	$(document).on('click', '#deletePopup', function(e){
 		$('#popupmenu2').popup("close");
 	    $("#popupmenu2" ).bind({popupafterclose: function(event, ui) { 
@@ -116,49 +110,9 @@
         	}
         }); 
 	});
-
 	$( window ).unload(function() {
 		saveNotesToStorage();
 	});
-	function init(){
-		if (!localStorage.notes) {
-	        localStorage.notes = "{}";
-	    }
-	    Notes = JSON.parse(localStorage.getItem("notes"));
-	}
-	function addNewNote(title, content){
-		var oNote;
-		if(!newPageId){
-		 	oNote= new Note(title, content);
-		 	newPageId = oNote.id = $.now();
-		}else{
-			oNote = JSON.parse(Notes[newPageId]);
-			oNote.title = title;
-			oNote.content = content;
-		}
-		Notes[oNote.id]=JSON.stringify(oNote);
-	}
-	function loadNotes(){
-		var output="";
-	    if(Object.keys(Notes).length > 0){
-	    	for (var key in Notes) {
-    			var value = JSON.parse(Notes[key]);
-		    	output += "<li data-icon='false'><a href=#editnote  id=ag"+value.id +">"+value.title+"</a></li>";
-			}
-		}else{
-			output = "<li data-icon='false'>No notes data</li>";
-		}
-	    $("#l_notes").html(output).listview("refresh");
-	}
-	function saveNotesToStorage(){
-		localStorage.setItem("notes",JSON.stringify(Notes));
-	}
-	function isValidNote(title, content){
-		if(title == "Title..." || title==""){
-			return false;
-		}
-		return true;
-	}
   </script>
 </head>
 <body>
@@ -190,7 +144,7 @@
 	 	</div>
 	 	<div data-role="popup" id="popupmenu">
   			<ul data-role="listview" data-inset="true">
-	  			<li data-icon="false"><a id="addNewNote" href="#">Save</a></li>
+	  			<li data-icon="false"><a id="saveNewNote" href="#">Save</a></li>
 	  			<!-- <li data-icon="false"><a href="#">Move to trash</a></li> -->
   			</ul>
   		</div>
