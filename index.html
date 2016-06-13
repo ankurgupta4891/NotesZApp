@@ -21,10 +21,13 @@
   		this.content = content
   	}
   	var Notes = {};
-  	var editPageId = "";
+  	var editPageId;
+  	var newPageId=null;
  	$(function(){
  		init();
 	    loadNotes();
+	    $("#notefooter").hide(0);
+	    $("#notefooter2").hide(0);
  	});
 	function inputFocus(i){
     	if(i.value==i.defaultValue){ i.value=""; i.style.color="#000"; }
@@ -37,22 +40,32 @@
  		loadNotes();
  	});
  	$(document).on('pagebeforeshow','#newnote',function(e){
- 		$("#note_title").val("");
+ 		$("#note_title").val("Title...");
+ 		$("#note_title").css("color", "#888")
  		$("#note_ta").val("");
+ 		newPageId = null;
  	});
  	$(document).on('click','#addNewNote',  function(e){
- 		//console.log("adding new note");
  		$("#popupmenu").popup("close");   
  		var title = $("#note_title").val();
  		var content = $("#note_ta").val();
  		if(isValidNote(title,content)){
  			addNewNote(title,content);
- 			persistNotes();
+ 			saveNotesToStorage();
  			loadNotes();
- 		}
+ 			$("#notefooter").show(0).delay(2000).hide(0);
+ 		}else{
+			$("#popupmenu").bind({popupafterclose: function(event, ui) { 
+            	$( "#popupAlert" ).popup( "open" );
+        		}
+        	});
+        	$("#popupAlert").bind({popupafterclose: function(event, ui) { 
+        		 $("#popupmenu").unbind("popupafterclose");
+        		}
+        	}); 
+		}
 	});
 	$(document).on('click','#saveEditNote',  function(e){
- 		//console.log("saving old note");
  		$("#popupmenu2").popup("close");
  		var id = $("#note_id").val();
  		var oNote = JSON.parse(Notes[id]);
@@ -60,22 +73,29 @@
  		oNote.content = $("#note_ta2").val();
  		if(isValidNote(oNote.title,oNote.content)){
  			Notes[oNote.id]=JSON.stringify(oNote);
- 			persistNotes();
+ 			saveNotesToStorage();
 			loadNotes();
+			$("#notefooter2").show(0).delay(2000).hide(0);
+		}else{
+			$("#popupmenu2").bind({popupafterclose: function(event, ui) { 
+            	$( "#popupAlert2" ).popup( "open" );
+        		}
+        	});
+        	$("#popupAlert2").bind({popupafterclose: function(event, ui) { 
+        		 $("#popupmenu2").unbind("popupafterclose");
+        		}
+        	}); 
 		}
 	});
 
 	$(document).on('click','#moveToTrash',  function(e){
- 		//console.log("deleting note");
- 		$("#popupmenu2").popup("close");
  		var id = $("#note_id").val();
  		delete(Notes[id]);
- 		persistNotes();
+ 		saveNotesToStorage();
 		loadNotes();
 	});
 
 	$(document).on('click', '#l_notes li',function(e){
-		//console.log("foooooooo");
 		editPageId = e.target.id;
 		if(editPageId.startsWith("ag")){
 			editPageId = editPageId.substring(2);
@@ -90,22 +110,32 @@
 	    $("#popupmenu2" ).bind({popupafterclose: function(event, ui) { 
             $( "#popupDialog" ).popup( "open" );
         }
+        });
+        $("#popupDialog").bind({popupafterclose: function(event, ui) { 
+        		$("#popupmenu2").unbind("popupafterclose");
+        	}
         }); 
 	});
 
 	$( window ).unload(function() {
-		persistNotes();
+		saveNotesToStorage();
 	});
 	function init(){
 		if (!localStorage.notes) {
-	 		console.log("fooo");
-	        localStorage.notes = "[]";
+	        localStorage.notes = "{}";
 	    }
 	    Notes = JSON.parse(localStorage.getItem("notes"));
 	}
 	function addNewNote(title, content){
-		var oNote = new Note(title, content);
-		oNote.id = $.now();
+		var oNote;
+		if(!newPageId){
+		 	oNote= new Note(title, content);
+		 	newPageId = oNote.id = $.now();
+		}else{
+			oNote = JSON.parse(Notes[newPageId]);
+			oNote.title = title;
+			oNote.content = content;
+		}
 		Notes[oNote.id]=JSON.stringify(oNote);
 	}
 	function loadNotes(){
@@ -113,23 +143,18 @@
 	    if(Object.keys(Notes).length > 0){
 	    	for (var key in Notes) {
     			var value = JSON.parse(Notes[key]);
-		    	output += "<li data-icon='false'><a href=#editnote  id=ag"+value.id +">"+value.title+"</a></li>"
+		    	output += "<li data-icon='false'><a href=#editnote  id=ag"+value.id +">"+value.title+"</a></li>";
 			}
 		}else{
-			output = "<li data-icon='false'>No notes data</li>"
+			output = "<li data-icon='false'>No notes data</li>";
 		}
 	    $("#l_notes").html(output).listview("refresh");
 	}
-	function persistNotes(){
-		localStorage.notes = JSON.stringify(Notes);
+	function saveNotesToStorage(){
+		localStorage.setItem("notes",JSON.stringify(Notes));
 	}
 	function isValidNote(title, content){
 		if(title == "Title..." || title==""){
-			$("#popupAlert").popup("open");
-			return false;
-		}
-		if(content == ""){
-			$("#popupAlert").popup("open");
 			return false;
 		}
 		return true;
@@ -152,11 +177,6 @@
   	<div class="addbtn" id="btn">
   		<a href="#newnote" class="ui-btn ui-shadow ui-corner-all ui-icon-edit ui-btn-icon-notext ui-btn-inline ui-btn-b">Add Notes</a>
   	</div>
-
-  	 <div data-role="popup" id="popupAlert" class="ui-content" style="max-width:280px">
-	 <a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-left">Close</a>
-	 <p>Invalid Title/Content.</p>
-	 </div>
 </div>
 
 <div data-role ="page" id="newnote">
@@ -175,11 +195,18 @@
   			</ul>
   		</div>
 	</div>
+  	 <div data-role="popup" id="popupAlert" class="ui-content" style="max-width:280px">
+		 <a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-left">Close</a>
+		 <h3>No Title</h3>
+	 </div>
   	<div data-role="main" class="ui-content" style="position:relative">
     	<form method="post" action="">
       		<input type="text" name="title" id="note_title" onfocus="inputFocus(this)" onblur="inputBlur(this)" style="color:#888;" value="Title...">
       		<textarea name="notecontent" id="note_ta"></textarea>
     	</form>
+  	</div>
+  	<div data-role="footer" id="notefooter">
+    	<h2>Note saved.</h2>
   	</div>
 </div>
 
@@ -199,6 +226,10 @@
   			</ul>
   		</div>
 	</div>
+	<div data-role="popup" id="popupAlert2" class="ui-content" style="max-width:280px">
+		 <a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-left">Close</a>
+		 <h3>No Title</h3>
+	</div>
 	<div data-role="popup" id="popupDialog" data-theme="a" data-overlay-theme="a">
 		<div data-role="header" data-theme="a" class="ui-corner-top ui-header ui-bar-a" role="banner">
 			<h1>Delete Note</h1>
@@ -206,7 +237,7 @@
 		<div role="main" class="ui-content">
 			<h3>Are you sure you want to delete the note?</h3>
 			<a href="#" data-role="button" data-rel="back" data-inline="true" data-theme="a" class="ui-btn ui-btn-a ui-btn-inline ui-corner-all">Cancel</a>
-			<a href="#homepage" id="moveToTrash" data-role="button" data-rel="back" data-inline="true" data-theme="a" class="ui-btn ui-btn-a ui-btn-inline ui-corner-all">Delete</a>
+			<a href="#homepage" id="moveToTrash" data-role="button" data-inline="true" data-theme="a" class="ui-btn ui-btn-a ui-btn-inline ui-corner-all">Delete</a>
 		</div>
 	</div>	
   	<div data-role="main" class="ui-content" id="editPage" style="position:relative">
@@ -215,6 +246,9 @@
       		<input type="text" name="title" id="note_title2" value="">
       		<textarea name="notecontent" id="note_ta2"></textarea>
     	</form>
+  	</div>
+  	<div data-role="footer" id="notefooter2">
+    	<h5>Note saved.</h5>
   	</div>
 </div>
 </body>
