@@ -1,2 +1,2 @@
 # NotesZApp
-a note web app
+A note web app 
